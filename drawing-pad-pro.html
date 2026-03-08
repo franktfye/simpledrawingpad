@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drawing Pad</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #1a1714;
+      --paper: #f5f0e8;
+      --paper-dark: #ede6d6;
+      --warm-mid: #b8a99a;
+      --accent: #c0392b;
+      --accent-soft: rgba(192,57,43,0.12);
+      --shadow: rgba(26,23,20,0.12);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--paper);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(180,160,130,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 90%, rgba(180,160,130,0.12) 0%, transparent 60%);
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 18px 36px 10px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: 1.55rem;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+    .brand em {
+      font-style: italic;
+      color: var(--warm-mid);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid var(--warm-mid);
+      background: transparent;
+      color: var(--ink);
+      padding: 6px 16px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--paper);
+    }
+    .btn.primary {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--paper);
+    }
+    .btn.primary:hover {
+      background: #3a3330;
+      border-color: #3a3330;
+    }
+    .btn.danger {
+      border-color: transparent;
+      color: var(--warm-mid);
+    }
+    .btn.danger:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Main layout ── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      gap: 0;
+      padding: 0 36px 20px;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 16px 12px;
+      background: var(--paper-dark);
+      border: 1px solid rgba(184,169,154,0.4);
+      border-radius: 4px 0 0 4px;
+      align-items: center;
+      flex-shrink: 0;
+      width: 52px;
+    }
+
+    .tool-sep {
+      width: 24px;
+      height: 1px;
+      background: var(--warm-mid);
+      opacity: 0.4;
+      margin: 4px 0;
+    }
+
+    .tool-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      color: var(--warm-mid);
+      position: relative;
+    }
+    .tool-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .tool-btn:hover { background: rgba(26,23,20,0.06); color: var(--ink); }
+    .tool-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    /* Tooltip */
+    .tool-btn::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 2px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .tool-btn:hover::after { opacity: 1; }
+
+    /* Size dots */
+    .size-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .size-btn:hover { background: rgba(26,23,20,0.06); }
+    .size-btn.active { background: rgba(26,23,20,0.06); border-color: var(--warm-mid); }
+    .size-btn .dot {
+      border-radius: 50%;
+      background: var(--ink);
+    }
+
+    /* Color swatches */
+    .swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.15); }
+    .swatch.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--paper); }
+
+    .color-input-wrap {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      overflow: hidden;
+      cursor: pointer;
+      border: 1.5px dashed var(--warm-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s;
+    }
+    .color-input-wrap:hover { transform: scale(1.15); }
+    .color-input-wrap input[type=color] {
+      width: 30px;
+      height: 30px;
+      border: none;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+      transform: scale(1.5);
+    }
+
+    /* Opacity slider */
+    .opacity-track {
+      width: 4px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--ink), transparent);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+      margin: 4px auto;
+    }
+    .opacity-thumb {
+      width: 10px;
+      height: 10px;
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      border-radius: 50%;
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      transition: transform 0.1s;
+    }
+    .opacity-thumb:active { cursor: grabbing; }
+
+    /* ── Canvas ── */
+    .canvas-wrap {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid rgba(184,169,154,0.4);
+      border-left: none;
+      border-radius: 0 4px 4px 0;
+      box-shadow: 6px 6px 24px var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.8);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    canvas.eraser-mode { cursor: cell; }
+    canvas.eyedropper-mode { cursor: crosshair; }
+    canvas.text-mode { cursor: text; }
+
+    /* ── Text overlay input ── */
+    #textOverlay {
+      position: absolute;
+      display: none;
+      z-index: 10;
+      background: transparent;
+    }
+    #textInput {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      min-width: 120px;
+      min-height: 2em;
+      white-space: pre;
+      overflow: hidden;
+      line-height: 1.35;
+      padding: 2px 4px;
+      caret-color: currentColor;
+      border-bottom: 1.5px dashed rgba(184,169,154,0.7);
+    }
+
+    /* ── Text options panel ── */
+    #textPanel {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--paper-dark);
+      border: 1px solid rgba(184,169,154,0.5);
+      border-radius: 4px;
+      padding: 6px 14px;
+      box-shadow: 0 4px 16px var(--shadow);
+      z-index: 20;
+      animation: slideDown 0.18s ease;
+    }
+    #textPanel.visible { display: flex; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .tp-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--warm-mid);
+    }
+    .tp-select {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.72rem;
+      background: transparent;
+      border: 1px solid rgba(184,169,154,0.5);
+      border-radius: 2px;
+      padding: 3px 6px;
+      color: var(--ink);
+      cursor: pointer;
+      outline: none;
+    }
+    .tp-select:focus { border-color: var(--ink); }
+    .tp-size-input {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.72rem;
+      width: 46px;
+      background: transparent;
+      border: 1px solid rgba(184,169,154,0.5);
+      border-radius: 2px;
+      padding: 3px 6px;
+      color: var(--ink);
+      outline: none;
+      text-align: center;
+    }
+    .tp-size-input:focus { border-color: var(--ink); }
+    .tp-sep { width: 1px; height: 18px; background: rgba(184,169,154,0.4); }
+    .tp-hint {
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      color: var(--warm-mid);
+      font-style: italic;
+    }
+
+    /* ── Status bar ── */
+    .statusbar {
+      position: absolute;
+      bottom: 10px;
+      right: 14px;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--warm-mid);
+      pointer-events: none;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 22px;
+      border-radius: 2px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Studio <em>Draw</em></div>
+  <div class="header-actions">
+    <button class="btn danger" id="clearBtn">Clear</button>
+    <button class="btn" id="undoBtn">Undo</button>
+    <button class="btn primary" id="saveBtn">Save PNG</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- Toolbar -->
+  <div class="toolbar">
+
+    <!-- Tools -->
+    <button class="tool-btn active" id="tool-pen" data-tool="pen" data-tip="Pen">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-brush" data-tool="brush" data-tip="Brush">
+      <svg viewBox="0 0 24 24"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 0 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1 1 2.48 1.02 3.5 1.02 2.22 0 4-1.8 4-4.04 0-1.66-1.35-3.02-3-3.02z"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-eraser" data-tool="eraser" data-tip="Eraser">
+      <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l10-10 7 7-4 4"/><path d="M6.0001 10l8 8"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-text" data-tool="text" data-tip="Text">
+      <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+    </button>
+
+    <div class="tool-sep"></div>
+
+    <!-- Sizes -->
+    <button class="size-btn active" data-size="2" data-tip="Fine">
+      <div class="dot" style="width:4px;height:4px"></div>
+    </button>
+    <button class="size-btn" data-size="6" data-tip="Medium">
+      <div class="dot" style="width:8px;height:8px"></div>
+    </button>
+    <button class="size-btn" data-size="14" data-tip="Thick">
+      <div class="dot" style="width:14px;height:14px"></div>
+    </button>
+    <button class="size-btn" data-size="28" data-tip="Bold">
+      <div class="dot" style="width:20px;height:20px"></div>
+    </button>
+
+    <div class="tool-sep"></div>
+
+    <!-- Colors -->
+    <div class="swatch active" data-color="#1a1714" style="background:#1a1714"></div>
+    <div class="swatch" data-color="#f5f0e8" style="background:#f5f0e8; border:1.5px solid #ccc"></div>
+    <div class="swatch" data-color="#c0392b" style="background:#c0392b"></div>
+    <div class="swatch" data-color="#2980b9" style="background:#2980b9"></div>
+    <div class="swatch" data-color="#27ae60" style="background:#27ae60"></div>
+    <div class="swatch" data-color="#f39c12" style="background:#f39c12"></div>
+    <div class="swatch" data-color="#8e44ad" style="background:#8e44ad"></div>
+    <div class="color-input-wrap" data-tip="Custom">
+      <input type="color" id="customColor" value="#1a1714" title="Custom colour"/>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <!-- Opacity -->
+    <div class="opacity-track" id="opacityTrack">
+      <div class="opacity-thumb" id="opacityThumb"></div>
+    </div>
+
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+
+    <!-- Text options panel (shown when text tool active) -->
+    <div id="textPanel">
+      <span class="tp-label">Font</span>
+      <select class="tp-select" id="fontSelect">
+        <option value="'Cormorant Garamond', serif">Cormorant</option>
+        <option value="'Jost', sans-serif">Jost</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="'Courier New', monospace">Courier</option>
+        <option value="Impact, sans-serif">Impact</option>
+      </select>
+      <div class="tp-sep"></div>
+      <span class="tp-label">Size</span>
+      <input class="tp-size-input" id="fontSizeInput" type="number" value="28" min="8" max="200"/>
+      <div class="tp-sep"></div>
+      <span class="tp-hint">Click canvas to place · Enter to stamp · Esc to cancel</span>
+    </div>
+
+    <!-- Floating text input -->
+    <div id="textOverlay">
+      <textarea id="textInput" rows="1" spellcheck="false" autocomplete="off"></textarea>
+    </div>
+
+    <div class="statusbar" id="statusbar">100% opacity · pen · 2px</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const wrap = canvas.parentElement;
+
+  // ── State ──
+  let tool = 'pen';
+  let color = '#1a1714';
+  let size = 2;
+  let opacity = 1;
+  let drawing = false;
+  let last = null;
+  let history = [];
+  let MAX_HISTORY = 30;
+
+  // ── Resize ──
+  function resize() {
+    const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    canvas.width = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+    ctx.putImageData(snap, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function saveHistory() {
+    if (history.length >= MAX_HISTORY) history.shift();
+    history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  }
+
+  // ── Drawing ──
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (canvas.width / r.width), y: (src.clientY - r.top) * (canvas.height / r.height) };
+  }
+
+  function startDraw(e) {
+    if (tool === 'text') return;
+    e.preventDefault();
+    drawing = true;
+    last = getPos(e);
+    saveHistory();
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, getEffectiveSize() / 2, 0, Math.PI * 2);
+    ctx.fillStyle = getEffectiveColor();
+    ctx.fill();
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.globalAlpha = tool === 'eraser' ? 1 : opacity;
+    ctx.strokeStyle = getEffectiveColor();
+    ctx.lineWidth = getEffectiveSize();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (tool === 'brush') {
+      ctx.shadowBlur = size * 1.5;
+      ctx.shadowColor = color;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    last = pos;
+  }
+
+  function endDraw() {
+    drawing = false;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowBlur = 0;
+    last = null;
+  }
+
+  function getEffectiveSize() {
+    return tool === 'eraser' ? size * 3 : size;
+  }
+
+  function getEffectiveColor() {
+    return color;
+  }
+
+  // ── Text Tool ──
+  const textOverlay = document.getElementById('textOverlay');
+  const textInput   = document.getElementById('textInput');
+  const fontSelect  = document.getElementById('fontSelect');
+  const fontSizeInput = document.getElementById('fontSizeInput');
+
+  let textFont = "'Cormorant Garamond', serif";
+  let textFontSize = 28;
+  let textX = 0, textY = 0;
+
+  fontSelect.addEventListener('change', () => {
+    textFont = fontSelect.value;
+    textInput.style.fontFamily = textFont;
+  });
+  fontSizeInput.addEventListener('input', () => {
+    textFontSize = Math.max(8, Math.min(200, parseInt(fontSizeInput.value) || 28));
+    textInput.style.fontSize = textFontSize + 'px';
+    autoGrow();
+  });
+
+  function placeTextInput(e) {
+    if (tool !== 'text') return;
+    if (e.target === textInput) return;
+    commitText();
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
+    const cx = (e.clientX - r.left);
+    const cy = (e.clientY - r.top);
+    textX = cx * scaleX;
+    textY = cy * scaleY;
+
+    textOverlay.style.left = cx + 'px';
+    textOverlay.style.top  = cy + 'px';
+    textOverlay.style.display = 'block';
+    textInput.style.fontFamily = textFont;
+    textInput.style.fontSize   = textFontSize + 'px';
+    textInput.style.color      = color;
+    textInput.style.opacity    = opacity;
+    textInput.value = '';
+    autoGrow();
+    textInput.focus();
+  }
+
+  function commitText() {
+    const txt = textInput.value.trim();
+    if (txt) {
+      saveHistory();
+      const lines = textInput.value.split('\n');
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle   = color;
+      ctx.font        = `${textFontSize}px ${textFont}`;
+      ctx.textBaseline = 'top';
+      const lineH = textFontSize * 1.35;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, textX, textY + i * lineH);
+      });
+      ctx.globalAlpha = 1;
+    }
+    textOverlay.style.display = 'none';
+    textInput.value = '';
+  }
+
+  function autoGrow() {
+    textInput.style.height = 'auto';
+    textInput.style.height = textInput.scrollHeight + 'px';
+    textInput.style.width  = 'auto';
+    // measure width
+    const tmp = document.createElement('span');
+    tmp.style.cssText = `visibility:hidden;position:absolute;white-space:pre;font:${textFontSize}px ${textFont}`;
+    const lines = textInput.value.split('\n');
+    tmp.textContent = lines.reduce((a,b) => a.length > b.length ? a : b, '') + 'W';
+    document.body.appendChild(tmp);
+    textInput.style.width = Math.max(120, tmp.offsetWidth + 8) + 'px';
+    tmp.remove();
+  }
+
+  textInput.addEventListener('input', autoGrow);
+
+  textInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      textInput.value = '';
+      commitText();
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commitText();
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      // allow multiline — autoGrow will handle sizing
+      setTimeout(autoGrow, 0);
+    }
+  });
+
+  // Hook canvas clicks for text placement
+  canvas.addEventListener('click', placeTextInput);
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
+
+  // ── Tools ──
+  document.querySelectorAll('[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (tool === 'text') commitText(); // stamp any pending text first
+      tool = btn.dataset.tool;
+      document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      canvas.className = tool === 'eraser' ? 'eraser-mode' : tool === 'text' ? 'text-mode' : '';
+      document.getElementById('textPanel').classList.toggle('visible', tool === 'text');
+      updateStatus();
+    });
+  });
+
+  // ── Sizes ──
+  document.querySelectorAll('[data-size]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      size = parseInt(btn.dataset.size);
+      document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateStatus();
+    });
+  });
+
+  // ── Colors ──
+  document.querySelectorAll('.swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      color = sw.dataset.color;
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      updateStatus();
+    });
+  });
+
+  const customColor = document.getElementById('customColor');
+  customColor.addEventListener('input', () => {
+    color = customColor.value;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    updateStatus();
+  });
+
+  // ── Opacity slider ──
+  const track = document.getElementById('opacityTrack');
+  const thumb = document.getElementById('opacityThumb');
+  let draggingOpacity = false;
+
+  function setOpacityFromY(clientY) {
+    const r = track.getBoundingClientRect();
+    let ratio = (clientY - r.top) / r.height;
+    ratio = Math.max(0, Math.min(1, ratio));
+    opacity = 1 - ratio;
+    thumb.style.top = (ratio * 100) + '%';
+    updateStatus();
+  }
+
+  thumb.addEventListener('mousedown', e => { draggingOpacity = true; e.preventDefault(); });
+  track.addEventListener('mousedown', e => { draggingOpacity = true; setOpacityFromY(e.clientY); });
+  window.addEventListener('mousemove', e => { if (draggingOpacity) setOpacityFromY(e.clientY); });
+  window.addEventListener('mouseup', () => { draggingOpacity = false; });
+
+  // Init thumb position
+  thumb.style.top = '0%';
+
+  // ── Status ──
+  function updateStatus() {
+    const pct = Math.round(opacity * 100);
+    const info = tool === 'text' ? `${textFontSize}px` : `${size}px`;
+    document.getElementById('statusbar').textContent = `${pct}% opacity · ${tool} · ${info}`;
+  }
+
+  // ── Undo ──
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    if (!history.length) return;
+    const snap = history.pop();
+    ctx.putImageData(snap, 0, 0);
+    showToast('Undone');
+  });
+
+  // ── Clear ──
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    saveHistory();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    showToast('Canvas cleared');
+  });
+
+  // ── Save ──
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    // Composite on white bg
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width;
+    tmp.height = canvas.height;
+    const tctx = tmp.getContext('2d');
+    tctx.fillStyle = '#ffffff';
+    tctx.fillRect(0, 0, tmp.width, tmp.height);
+    tctx.drawImage(canvas, 0, 0);
+
+    const link = document.createElement('a');
+    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    link.download = `drawing-${ts}.png`;
+    link.href = tmp.toDataURL('image/png');
+    link.click();
+    showToast('Saved to your downloads');
+  });
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ── Keyboard shortcuts ──
+  window.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
+      if (e.key === 's') { e.preventDefault(); document.getElementById('saveBtn').click(); }
+    }
+    if (!e.ctrlKey && !e.metaKey) {
+      if (e.key === 'p') document.getElementById('tool-pen').click();
+      if (e.key === 'b') document.getElementById('tool-brush').click();
+      if (e.key === 'e') document.getElementById('tool-eraser').click();
+      if (e.key === 't') document.getElementById('tool-text').click();
+    }
+  });
+
+  updateStatus();
+</script>
+</body>
+</html>
